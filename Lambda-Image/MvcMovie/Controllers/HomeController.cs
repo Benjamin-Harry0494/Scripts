@@ -47,10 +47,10 @@ public class HomeController : Controller
         var loginSelector = "#ctl00_content_login_LoginButton";
 
         await page.WaitForSelectorAsync(usernameSelector);
-        await TypeFieldValue(page, usernameSelector, "TomG", delay);
+        await TypeFieldValue(page, usernameSelector, "", delay);
         Console.WriteLine("Completed Username");
         await page.WaitForSelectorAsync(passwordSelector);
-        await TypeFieldValue(page, passwordSelector, "Today2@TomG", delay);
+        await TypeFieldValue(page, passwordSelector, "", delay);
         Console.WriteLine("Completed Password");
 
         await page.ClickAsync(loginSelector); 
