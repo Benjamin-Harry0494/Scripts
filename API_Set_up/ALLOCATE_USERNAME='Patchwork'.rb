@@ -1,5 +1,5 @@
 ALLOCATE_USERNAME='Patchwork'
-ALLOCATE_PASSWORD='9qhvgfy78why7puHgP'
+ALLOCATE_PASSWORD='password'
 ALLOCATE_IDENTITY_URL='https://identitytest.allocate-cloud.co.uk/core/connect/token'
 ALLOCATE_URL='https://api-partner.allocate-dev.co.uk/v1'
 PATCHWORK_USER_EMAIL='benjamin.harry@patchwork.health'
