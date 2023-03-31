@@ -1,0 +1,102 @@
+SELECT hub_id, created_at FROM shifts WHERE bankstaff_request_id IS NULL;
+
+
+vi input.sql
+SELECT * FROM allocate_job_events;
+mysql -u root -h "localhost" -p"JustAnotherDockerPw" --port=3306 --protocol=TCP ebdb < input.sql > output.txt
+docker cp 7b6d7f8fdb27:/output.txt ~/
+
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8x1qla1i8suTN3kcV4JSlxtSI2EVRWHgf7q1igI1fQRmIuHpjKoDkRv6f2eDPOqP/lo+6XBs9X3yJ/LuKOjiPBp5u6Bc3rYZjZbgjEEyN1KNVGqD2AjqxPTX8OPOL+XiB0tK2IVNQyna7SB7NhaE5QuGi9ACSmaKytYhwgPp1Nfbei1gPEW9g2utClEobk6j5lrS8fEf1ByW2w5TY/G58cAqbRumkLvlPONW9yWsY4RzoCI9EvNWXyvePF+j8Nk5De9zacMBsXp07137VDtaLh21R8oA79Nmm/6naIpML7j1D7kKvISFe/T/2e/ayL0SSActVWICx7ikV8mzQzn0/ patchwork-developers
+import pandas as pd
+import boto3
+from boto3.dynamodb.conditions import Key
+import csv
+import xlrd
+
+params = {
+        'TableName': 'allocate_data',
+        'KeySchema': [
+            {'AttributeName': 'data_type', 'KeyType': 'HASH'},
+            {'AttributeName': 'name', 'KeyType': 'RANGE'}
+        ],
+        'AttributeDefinitions': [
+            {'AttributeName': 'data_type', 'AttributeType': 'S'},
+            {'AttributeName': 'name', 'AttributeType': 'S'}
+        ],
+        'ProvisionedThroughput': {
+            'ReadCapacityUnits': 1,
+            'WriteCapacityUnits': 1
+        }
+    }
+table = client.Table("allocate_data") #table is resource table "allocate_data"
+known_workers = {}
+workers = table.query(KeyConditionExpression=Key('data_type').eq('KCH_WORKER'))['Items']
+
+for worker in workers:
+    known_workers[worker['name']] = worker
+
+client = boto3.resource('dynamodb', endpoint_url='http://localhost:8000', region_name='eu-west-2') #sets resource to client
+ddb_client = boto3.client('dynamodb', endpoint_url='http://localhost:8000', region_name='eu-west-2')
+table = client.Table("allocate_data") #table is resource table "allocate_data"
+known_workers = {}
+workers = table.query(KeyConditionExpression=Key('data_type').eq('KCH_WORKER'))['Items']
+for worker in workers:
+    known_workers[worker['name']] = worker
+
+
+workers_bank_staff = pd.read_excel("kch_new_data.xls")
+workers_bank_staff.to_csv("/tmp/kch_new_data.csv", index=None, header=True) #convert new download to csv
+workers_bank_staff = pd.read_csv("/tmp/kch_new_data.csv") #set df as csv
+workers_bank_staff = workers_bank_staff.rename(columns={'Staff Number': 'staff_number'}) #Staff Number column becomes staff_number
+workers_bank_staff["amended_staff_number"] = workers_bank_staff["staff_number"].str.split('-').str[0]
+
+workers_bank_staff = pd.read_excel("kch_new_data.xls")
+workers_bank_staff = workers_bank_staff.rename(columns={'Staff Number': 'staff_number'}) #Staff Number column becomes staff_number
+workers_bank_staff["amended_staff_number"] = workers_bank_staff["staff_number"].str.split('-').str[0]
+workers_bank_staff.to_csv("kch_new_data.csv", index=None, header=True) #convert new download to csv
+workers_bank_staff = pd.read_csv("kch_new_data.csv") 
+#remove any numbers after '-' in staff_number and sets to amended_staff_number
+
+table.put_item(Item= {'name': worker_name,
+                'data_type' : 'KCH_WORKER',
+                'staff_number':  employee_number,
+                'status' : 'UNMAPPED'})
+
+with open('kch_new_data.csv', newline='') as csvfile: #read newly defined csv
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        worker_name = row['Name'] #Row 'Name' in kch_new_data.csv = worker_name
+        employee_number = row['amended_staff_number']
+        unknown_workers = set()
+        if worker_name in known_workers:
+            print(worker_name + " already exists in ddb...")
+        else:
+            unknown_workers.add(worker_name)
+            print(worker_name + " did not previously exist in ddb and has now been added...")
+            table.put_item(Item= {'name': worker_name,
+                            'data_type' : 'KCH_WORKER',
+                            'staff_number':  employee_number,
+                            'status' : 'UNMAPPED'})
+
+
+print(ddb_client.scan(TableName='allocate_data')['Items'])
+
+
+
+ worker = {
+      providerId: 'Patchwork',
+      workerData: {
+        forenames: @worker.first_name,
+        surname: @worker.last_name,
+        dateOfBirth: @worker.date_of_birth.to_s,
+        nationalInsuranceNumber: @worker.ni_number,
+        hireDate: DateTime.new(2018), # TODO: this needs to be changed!!!
+        postings: [
+          {
+            gradeId: @worker.grade(@external_organisation.organisation).default_external_grade.external_id,
+            startsOn: @worker.created_at.strftime('%Y-%m-%d').to_s, # TODO: need to use organisation worker for this
+            endsOn: @worker.reg_body_number_expiration_date.to_s
+          }
+        ]
+      }
+ }        
